@@ -10,3 +10,4 @@ __pycache__/
 # migrated checkpoints and run outputs (reproducible from runs' meta.json)
 .cache/
 runs/
+exports/

@@ -14,7 +14,7 @@ from typing import Any
 
 import numpy as np
 
-from . import sides, store
+from . import runmeta, sides, store
 
 
 @dataclass
@@ -71,6 +71,9 @@ class RunData:
 def load(run_dir: Path | str | None = None) -> RunData:
     """Load every episode's trace (small). Activations stay on disk until asked for."""
     run_dir = Path(run_dir) if run_dir else store.latest_run()
+    if not run_dir.is_dir():
+        near = sorted(p.name for p in run_dir.parent.glob("*") if p.is_dir()) if run_dir.parent.is_dir() else []
+        raise FileNotFoundError(f"No run folder at {run_dir.resolve()}. Runs found next to it: {near or 'none'}")
     eps = []
     for line in store.read_index(run_dir):
         vid = run_dir / "videos" / f"ep_{line['idx']:05d}.mp4"
@@ -78,6 +81,46 @@ def load(run_dir: Path | str | None = None) -> RunData:
                                store.load_episode(run_dir, line["idx"])["trace"],
                                vid if vid.exists() else None, run_dir))
     return RunData(run_dir, eps)
+
+
+def provenance(run: RunData) -> dict[str, Any]:
+    """Where a run's data came from: the files on disk and the settings that produced them.
+
+    Read straight from meta.json (D-004), so it cannot drift from what actually ran.
+    Missing fields come back as None: old or partial runs still display.
+    """
+    d = Path(run.run_dir).resolve()
+    try:
+        meta = runmeta.read_meta(d)
+    except FileNotFoundError:
+        meta = {}
+    cfg, env, pol = meta.get("config", {}), meta.get("environment", {}), meta.get("policy", {})
+    git = env.get("git") or {}
+    return {
+        "run_id": meta.get("run_id", d.name),
+        "folder": str(d),
+        "files": {"meta.json": str(d / runmeta.META_FILE), "episodes.jsonl": str(d / store.INDEX_FILE),
+                  "episodes/": str(d / "episodes"), "videos/": str(d / "videos")},
+        "status": meta.get("status"),
+        "created_utc": meta.get("created_utc"),
+        "duration_s": meta.get("duration_s"),
+        "command": " ".join(meta["argv"]) if meta.get("argv") else None,
+        "policy": {"repo_id": pol.get("repo_id") or cfg.get("policy"), "checkpoint_commit": pol.get("commit"),
+                   "type": pol.get("policy_type"), "n_params": pol.get("n_params"), "device": pol.get("device"),
+                   "random_weights": cfg.get("random_weights")},
+        "settings": {k: cfg.get(k) for k in ("n", "seed", "max_steps", "layers", "no_pool", "all_calls",
+                                             "video", "near_miss_coverage")},
+        "code": {"commit": git.get("commit"), "dirty": git.get("dirty")},
+        "packages": env.get("packages") or {},
+        "summary": meta.get("summary"),
+        "with_video": [e.idx for e in run.episodes if e.video is not None],
+        "raw_meta": meta,
+    }
+
+
+def episode_file(run: RunData, idx: int) -> Path:
+    """The .npz holding episode idx's recorded arrays (trace/... and act/...)."""
+    return store.episode_path(Path(run.run_dir).resolve(), idx)
 
 
 def sweep(run: RunData, thresholds: np.ndarray, chunk: int = sides.CHUNK) -> np.ndarray:

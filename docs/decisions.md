@@ -9,3 +9,4 @@ D-007 2026-10-20 Library + tests + scripts first; notebooks later, for teaching 
 D-008 2026-10-21 Index lives in CLAUDE.md only (no AGENTS.md); supersedes the file name in D-006.
 D-009 2026-10-21 Side = agent angle around the block, in the block frame (pushing is not circling); swing = >=0.5 rad in one 8-step re-plan; switch = swing opposite the previous one.
 D-010 2026-10-21 Learning happens on recorded data, not robot runs: explore.py (numpy views) + explore_plots/explore_ui (sliders) + notebooks/explore.ipynb that only calls them. Supersedes the "notebooks later" in D-007.
+D-011 2026-10-21 Notebook figures are drawn off-screen and shown as an image replaced in place (no flicker), each with a footer naming its source files and settings; MP4 exports go to exports/, never into a run (D-004).

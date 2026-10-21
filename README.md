@@ -25,3 +25,5 @@ Results land in `runs/<run_id>/`; see `LAYOUT` in src/plens/store.py.
 pip install -e ".[explore]" && jupyter lab notebooks/explore.ipynb
 ```
 Sliders over recorded runs: paths around the T, the swing threshold, replay beside the angle plot, a toy, and layer activations.
+The notebook starts with what the task and policy are, shows the run's `meta.json` (files, policy checkpoint, code commit, settings),
+and every figure carries a footer naming its source file and settings. A replay can be saved as a smooth MP4 in `exports/`.
