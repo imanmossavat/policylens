@@ -8,6 +8,7 @@ Index of modules (grep the name to jump):
   rollout   - run one episode, return an Episode
   store     - save/load episodes and the per-run episode index
   labels    - outcome labels and run summaries
+  explore   - re-computable views of recorded runs; explore_plots / explore_ui: figures and sliders (D-010)
   sides     - which way around the T the agent goes, and whether it switches (Q-001)
 """
 

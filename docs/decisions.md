@@ -8,3 +8,4 @@ D-006 2026-10-20 Docs: one index (AGENTS.md) + one-line ID'd entries, enforced b
 D-007 2026-10-20 Library + tests + scripts first; notebooks later, for teaching only, importing from src/.
 D-008 2026-10-21 Index lives in CLAUDE.md only (no AGENTS.md); supersedes the file name in D-006.
 D-009 2026-10-21 Side = agent angle around the block, in the block frame (pushing is not circling); swing = >=0.5 rad in one 8-step re-plan; switch = swing opposite the previous one.
+D-010 2026-10-21 Learning happens on recorded data, not robot runs: explore.py (numpy views) + explore_plots/explore_ui (sliders) + notebooks/explore.ipynb that only calls them. Supersedes the "notebooks later" in D-007.

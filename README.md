@@ -19,3 +19,9 @@ python scripts/rollouts.py --list-layers            # layers you can record with
 First run downloads `lerobot/diffusion_pusht` and converts it once (G-001).
 Each episode takes minutes on a Mac (G-006); `--n 50` is better left for the 3090.
 Results land in `runs/<run_id>/`; see `LAYOUT` in src/plens/store.py.
+
+## Explore (no robot needed)
+```bash
+pip install -e ".[explore]" && jupyter lab notebooks/explore.ipynb
+```
+Sliders over recorded runs: paths around the T, the swing threshold, replay beside the angle plot, a toy, and layer activations.
