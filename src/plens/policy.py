@@ -1,0 +1,162 @@
+"""Load a LeRobot policy and its processors, and record exactly which weights were used."""
+
+from __future__ import annotations
+
+import dataclasses
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import torch
+from lerobot.configs.policies import PreTrainedConfig
+from lerobot.envs import make_env_pre_post_processors
+from lerobot.envs.configs import EnvConfig
+from lerobot.policies import make_policy, make_pre_post_processors
+
+DEFAULT_MIGRATION_CACHE = Path(".cache/migrated")
+
+# WHY these two (D-005): image features = what the policy sees; denoiser bottleneck =
+# what it plans. Names valid for lerobot/diffusion_pusht and load_random_diffusion().
+DIFFUSION_PUSHT_LAYERS = ["diffusion.rgb_encoder", "diffusion.unet.mid_modules.1"]
+
+
+@dataclass
+class PolicyBundle:
+    """Everything needed to turn an env observation into an env action."""
+
+    policy: Any
+    preprocessor: Any
+    postprocessor: Any
+    env_preprocessor: Any
+    env_postprocessor: Any
+    source: dict[str, Any] = field(default_factory=dict)  # goes into meta.json
+
+
+def pick_device(preference: str = "auto") -> str:
+    if preference != "auto":
+        return preference
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
+def _has_processors(path: Path) -> bool:
+    return any(path.glob("policy_preprocessor*.json"))
+
+
+def _tuples_where_declared(cfg: Any) -> None:
+    """JSON turns tuples into lists; LeRobot's config encoder then fails on save (G-005)."""
+    for f in dataclasses.fields(cfg):
+        value = getattr(cfg, f.name)
+        if isinstance(value, list) and "tuple" in str(f.type):
+            setattr(cfg, f.name, tuple(value))
+
+
+def migrate_legacy_checkpoint(src: Path, dst: Path) -> None:
+    """Convert a pre-processor-era checkpoint, using LeRobot's own migration helpers.
+
+    GOTCHA(G-001): lerobot/diffusion_pusht on the Hub predates LeRobot's processor
+    pipelines; its normalization stats live inside model.safetensors.
+    WHY in-process: LeRobot's migration CLI crashes on these configs (G-005).
+    """
+    from lerobot.policies.factory import get_policy_class, make_policy_config
+    from lerobot.processor import migrate_policy_normalization as mig
+    from safetensors.torch import load_file
+
+    state_dict = load_file(src / "model.safetensors")
+    config = json.loads((src / "config.json").read_text())
+    stats = mig.extract_normalization_stats(state_dict)
+    _, norm_map = mig.detect_features_and_norm_modes(config, stats)
+    clean = mig.clean_state_dict(mig.remove_normalization_layers(state_dict), remove_str="._orig_mod")
+
+    kwargs = {k: v for k, v in config.items() if k not in ("normalization_mapping", "type")}
+    for key in ("input_features", "output_features"):
+        if key in kwargs:
+            kwargs[key] = mig.convert_features_to_policy_features(kwargs[key])
+    kwargs["normalization_mapping"] = norm_map
+    kwargs["device"] = "cpu"  # Hub config says "cuda"; the real device is chosen at load time
+    cfg = make_policy_config(config["type"], **kwargs)
+    _tuples_where_declared(cfg)
+
+    policy = get_policy_class(config["type"])(cfg)
+    missing, unexpected = policy.load_state_dict(clean, strict=False)
+    if missing or unexpected:
+        raise RuntimeError(f"Weights do not match the architecture: missing={missing[:5]} "
+                           f"unexpected={unexpected[:5]}")
+    pre, post = make_pre_post_processors(policy_cfg=cfg, dataset_stats=stats)
+
+    dst.mkdir(parents=True, exist_ok=True)
+    pre.save_pretrained(dst)
+    post.save_pretrained(dst)
+    policy.to(torch.float32).save_pretrained(dst)
+    if not _has_processors(dst):
+        raise RuntimeError(f"Migration of {src} produced no processor files in {dst}")
+
+
+def resolve_checkpoint(
+    repo_or_path: str, revision: str | None = None, cache: Path = DEFAULT_MIGRATION_CACHE
+) -> tuple[Path, dict[str, Any]]:
+    """Return a local checkpoint dir with processors, plus provenance for meta.json."""
+    local = Path(repo_or_path)
+    if local.is_dir():
+        info: dict[str, Any] = {"repo_id": None, "local_path": str(local.resolve()), "commit": None}
+    else:
+        from huggingface_hub import snapshot_download
+
+        local = Path(snapshot_download(repo_or_path, revision=revision))
+        # The snapshot folder name is the resolved commit hash: exact weights, even if "main" moves.
+        info = {"repo_id": repo_or_path, "requested_revision": revision, "commit": local.name}
+
+    info["migrated"] = False
+    if not _has_processors(local):
+        tag = f"{repo_or_path.replace('/', '__')}@{info['commit'] or 'local'}"
+        migrated = cache / tag
+        if not _has_processors(migrated):
+            migrate_legacy_checkpoint(local, migrated)
+        local, info["migrated"] = migrated, True
+    info["loaded_from"] = str(local.resolve())
+    return local, info
+
+
+def _bundle(cfg: PreTrainedConfig, env_cfg: EnvConfig, pretrained: Path | None, device: str,
+            source: dict[str, Any]) -> PolicyBundle:
+    policy = make_policy(cfg=cfg, env_cfg=env_cfg)
+    policy.eval()
+    pre, post = make_pre_post_processors(
+        policy_cfg=cfg,
+        pretrained_path=str(pretrained) if pretrained else None,
+        preprocessor_overrides={"device_processor": {"device": device}},
+    )
+    env_pre, env_post = make_env_pre_post_processors(env_cfg=env_cfg, policy_cfg=cfg)
+    source = {**source, "device": device, "policy_type": cfg.type,
+              "n_params": sum(p.numel() for p in policy.parameters())}
+    return PolicyBundle(policy, pre, post, env_pre, env_post, source)
+
+
+def load_pretrained(repo_or_path: str, env_cfg: EnvConfig, device: str = "auto",
+                    revision: str | None = None) -> PolicyBundle:
+    device = pick_device(device)
+    local, source = resolve_checkpoint(repo_or_path, revision)
+    cfg = PreTrainedConfig.from_pretrained(local)
+    cfg.pretrained_path = str(local)
+    cfg.device = device
+    return _bundle(cfg, env_cfg, local, device, {"kind": "pretrained", **source})
+
+
+def load_random_diffusion(env_cfg: EnvConfig, device: str = "auto", **overrides: Any) -> PolicyBundle:
+    """Same architecture as the PushT diffusion policy, untrained. For tests and as a baseline.
+
+    No ImageNet backbone download, so it works offline.
+    """
+    from lerobot.policies.diffusion.configuration_diffusion import DiffusionConfig
+
+    device = pick_device(device)
+    # WHY: match lerobot/diffusion_pusht's architecture so layer names are identical
+    # (it uses one shared image encoder; LeRobot's current default is one per camera).
+    kwargs = {"pretrained_backbone_weights": None, "crop_shape": (84, 84),
+              "use_separate_rgb_encoder_per_camera": False, **overrides}
+    cfg = DiffusionConfig(device=device, **kwargs)
+    return _bundle(cfg, env_cfg, None, device, {"kind": "random_init", "overrides": kwargs})
