@@ -8,6 +8,7 @@ Index of modules (grep the name to jump):
   rollout   - run one episode, return an Episode
   store     - save/load episodes and the per-run episode index
   labels    - outcome labels and run summaries
+  sides     - which way around the T the agent goes, and whether it switches (Q-001)
 """
 
 __version__ = "0.1.0"

@@ -1,5 +1,5 @@
 # Research questions (one line each; status: open / active / answered by F-###)
-Q-001 open diff:A In failures, does the policy commit to one way around the T, or switch between ways from one re-plan to the next?
+Q-001 active (F-001, F-002; needs more failures) diff:A In failures, does the policy commit to one way around the T, or switch between ways from one re-plan to the next?
 Q-002 open diff:B In near-misses, is the alignment error already in the plan (denoiser output) or does it appear only during execution?
 Q-003 open diff:B Can a linear probe on image features read block pose? If probes stay accurate in failures, failures are planning, not perception.
 Q-004 open diff:F Can a probe on activations predict failure k steps before it happens (early warning)? How large can k be?

@@ -7,3 +7,4 @@ D-005 2026-10-20 Record diffusion.rgb_encoder (what the policy sees) and diffusi
 D-006 2026-10-20 Docs: one index (AGENTS.md) + one-line ID'd entries, enforced by tests/test_docs.py. Cheap to read, grep-able, hard to go stale.
 D-007 2026-10-20 Library + tests + scripts first; notebooks later, for teaching only, importing from src/.
 D-008 2026-10-21 Index lives in CLAUDE.md only (no AGENTS.md); supersedes the file name in D-006.
+D-009 2026-10-21 Side = agent angle around the block, in the block frame (pushing is not circling); swing = >=0.5 rad in one 8-step re-plan; switch = swing opposite the previous one.
