@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 .venv/
+.conda/
 .DS_Store
 
 # migrated checkpoints and run outputs (reproducible from runs' meta.json)

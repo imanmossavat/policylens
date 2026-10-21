@@ -1,7 +1,7 @@
 # policy-lens
 
 Run pretrained robot policies, record what happens inside them, and find out why they fail.
-End target: assembly and disassembly. Agents and contributors: start at AGENTS.md.
+End target: assembly and disassembly. Agents and contributors: start at CLAUDE.md.
 
 ## Setup (Mac or Linux, Python 3.12+)
 ```bash

@@ -24,7 +24,7 @@ def test_ids_are_unique():
 
 def test_every_cited_id_is_defined():
     defined = set(_defined())
-    files = [ROOT / "AGENTS.md", ROOT / "README.md", *_docs(),
+    files = [ROOT / "CLAUDE.md", ROOT / "README.md", *_docs(),
              *(ROOT / "src").rglob("*.py"), *(ROOT / "scripts").rglob("*.py"),
              *(p for p in (ROOT / "tests").rglob("*.py") if p.name != "test_docs.py")]
     missing = {(i, p.relative_to(ROOT).as_posix()) for p in files if p.exists()
@@ -33,10 +33,10 @@ def test_every_cited_id_is_defined():
 
 
 def test_every_doc_is_in_the_index():
-    index = (ROOT / "AGENTS.md").read_text()
+    index = (ROOT / "CLAUDE.md").read_text()
     unlisted = [p.relative_to(ROOT).as_posix() for p in _docs()
                 if p.relative_to(ROOT).as_posix() not in index]
-    assert not unlisted, f"Add to AGENTS.md: {unlisted}"
+    assert not unlisted, f"Add to CLAUDE.md: {unlisted}"
 
 
 def test_doc_entries_stay_short():
