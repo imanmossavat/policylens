@@ -23,6 +23,8 @@ Searching an ID (e.g. `G-001`) finds its doc line and every code line that cites
   Notebooks (later, notebooks/) are for teaching and exploring; they import, never define, library code.
 - Every run writes runs/<run_id>/meta.json: code commit, versions, device, config, seeds, outcome.
 - `pytest -m "not smoke"` is fast; plain `pytest` also runs the real env and policy architecture.
+- Before building or training on a new task: check existing benchmarks for it, and run a trivial controller.
+  If the trivial controller solves it, tell the user; never redesign an env without their permission.
 
 ## When and what to document
 Only what the code can't tell you. One line per entry; if it needs more, it belongs in a docstring or notebook.
