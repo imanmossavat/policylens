@@ -15,9 +15,14 @@ pytest -m "not smoke"   # fast checks; plain `pytest` adds the real env
 python scripts/rollouts.py --n 10 --name first      # pretrained Diffusion Policy on PushT
 python scripts/summarize.py --episodes              # latest run: provenance, success rate, labels
 python scripts/rollouts.py --list-layers            # layers you can record with --layers
+python scripts/rollouts.py --n 500 --batch-size 50 --layers --video 0 --name eval   # many episodes, fast
+python scripts/rollouts.py --n 500 --batch-size 50 --sampler ddim --inference-steps 10 --name ddim10
+python scripts/compare.py runs/<A> runs/<B>         # success with 95% CIs, paired by seed vs the first
 ```
 First run downloads `lerobot/diffusion_pusht` and converts it once (G-001).
-Each episode takes minutes on a Mac (G-006); `--n 50` is better left for the 3090.
+One episode takes ~30-45 s on an M4 Max (G-006). `--batch-size` shares each policy pass between envs:
+use it for statistics; keep batch 1 to reproduce a run seed for seed (G-008). Long runs on mps: G-007.
+Another LeRobot policy plugin (e.g. `lerobot_policy_flow_matching`) loads with `--policy <repo>` once installed.
 Results land in `runs/<run_id>/`; see `LAYOUT` in src/plens/store.py.
 
 ## Explore (no robot needed)

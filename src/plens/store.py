@@ -2,6 +2,7 @@
 
 LAYOUT runs/<run_id>/
   meta.json              what ran and how it ended (runmeta.py)
+  git_diff.patch         only if the code was uncommitted: the exact changes on top of the commit
   episodes.jsonl         one summary line per episode; the index to scan first
   episodes/ep_00000.npz  trace/<key> arrays, plus act/<layer>/{step,call,value}
   videos/ep_00000.mp4    optional, first --video N episodes

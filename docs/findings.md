@@ -1,3 +1,7 @@
 # Findings (one line each: F-### date run_id [diff:X] result; answers Q-### if any)
 F-001 2026-10-21 20261021-153458_sides [diff:A] 10 eps: 6 success, 2 near_miss, 2 fail (60%; model card 65.4%). Side around the T varies by seed (cw-only: 0,2,8; mostly ccw: 3,4,5): no fixed bias.
 F-002 2026-10-21 20261021-153458_sides [diff:A] Switches/ep (0.5 rad): fail 4.5, near_miss 2.5, success 1.5; but 5 of 6 successes switch too and the gap shrinks at 0.8 rad. 2 failures only: suggestive; partly answers Q-001.
+F-003 2026-10-24 20261023-222537_n500_ddpm100 [diff:A] DDPM-100, 500 eps: 60.0% [55.6,64.2]; same policy, new noise (20261023-235927_n500_ddpm100_noise1000): 62.6%, 185/500 seeds flip. Over 8 diffusion runs 426/500 seeds both succeed and fail: noise, not start state, decides most outcomes.
+F-004 2026-10-24 20261023-213908_n500_ddim5 DDIM 5/10/20/100 and DDPM-10 (runs *_n500_*) all within -3.4..+3.2 pts of DDPM-100, paired 95% CIs about +-5.5, all p>0.25. Fewer passes cost no measurable success; DDIM-5 is 9x faster per env step. Answers Q-009 (speed side).
+F-005 2026-10-24 20261023-220344_n500_flow10_replan16 ameyawagh555/flow_matching_pusht (Euler 10, horizon 64, re-plan 16): 68.4% [64.2,72.3], +5.8..+8.4 pts over the diffusion runs (p 0.006-0.056). Re-planning every 8 (20261023-220940_n500_flow10_replan8): 39.6%, 258 near-misses.
+F-006 2026-10-24 20261023-222537_n500_ddpm100 Batch 50 on mps: 24.9 ms per env step vs 141 ms at batch 1 (5.7x); DDIM-10 3.9 vs 17.6 ms (4.5x). 500 DDPM-100 episodes in 47 min. Answers Q-009 (throughput side).

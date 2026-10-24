@@ -1,4 +1,4 @@
-"""Environment construction. One env at a time: analysis needs per-step data, not throughput."""
+"""Environment construction. Envs run in lockstep batches; each env still yields its own per-step data."""
 
 from __future__ import annotations
 
@@ -19,10 +19,15 @@ def pusht_config(max_steps: int = 300) -> PushtEnv:
     )
 
 
-def make_single_env(env_cfg: PushtEnv) -> gym.vector.VectorEnv:
-    """A vector env holding exactly one env, the shape LeRobot's processors expect."""
-    envs = make_env(env_cfg, n_envs=1)
+def make_envs(env_cfg: PushtEnv, n_envs: int) -> gym.vector.VectorEnv:
+    """A synchronous vector env of n_envs copies, stepped together (see rollout.run_batch)."""
+    envs = make_env(env_cfg, n_envs=n_envs)
     # make_env returns {suite: {task_id: VectorEnv}}; with one task we want that VectorEnv.
     while isinstance(envs, dict):
         envs = next(iter(envs.values()))
     return envs
+
+
+def make_single_env(env_cfg: PushtEnv) -> gym.vector.VectorEnv:
+    """A vector env holding exactly one env, the shape LeRobot's processors expect."""
+    return make_envs(env_cfg, 1)

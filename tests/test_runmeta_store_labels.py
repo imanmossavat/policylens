@@ -59,3 +59,22 @@ def test_summarize():
     s = labels.summarize(index)
     assert s["success_rate"] == 0.5 and s["labels"] == {"fail": 1, "success": 1}
     assert s["mean_max_coverage"] == 0.6 and labels.summarize([]) == {"n_episodes": 0}
+
+
+def test_git_patch_has_edits_and_new_files(tmp_path):
+    import subprocess
+
+    from plens.runmeta import _git_patch
+
+    def git(*a):
+        subprocess.run(["git", *a], cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-q")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "a.py").write_text("x = 1\n")
+    git("add", ".")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init")
+    (tmp_path / "src" / "a.py").write_text("x = 2\n")
+    (tmp_path / "src" / "new.py").write_text("y = 3\n")
+    patch = _git_patch(tmp_path)
+    assert "+x = 2" in patch and "+y = 3" in patch

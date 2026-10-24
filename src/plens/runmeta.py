@@ -34,6 +34,22 @@ def _git_info(cwd: Path) -> dict[str, Any] | None:
         return None
 
 
+PATCH_FILE = "git_diff.patch"
+PATCH_DIRS = ("src", "scripts", "tests", "docs")
+
+
+def _git_patch(cwd: Path) -> str:
+    """Uncommitted changes as a patch: tracked edits plus new files under PATCH_DIRS."""
+    def git(*args: str) -> str:
+        # --no-index diffs exit 1 when files differ, so no check=True
+        return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True).stdout
+
+    parts = [git("diff", "HEAD")]
+    for path in git("ls-files", "--others", "--exclude-standard", *PATCH_DIRS).split():
+        parts.append(git("diff", "--no-index", "--", "/dev/null", path))
+    return "".join(parts)
+
+
 def _package_versions() -> dict[str, str | None]:
     out: dict[str, str | None] = {}
     for name in TRACKED_PACKAGES:
@@ -70,6 +86,10 @@ def new_run(root: Path | str, name: str, config: dict[str, Any]) -> Path:
         "config": config,
         "environment": environment_info(),
     }
+    # WHY: a dirty commit hash alone cannot rebuild the code that ran; the patch can.
+    if (meta["environment"]["git"] or {}).get("dirty"):
+        (run_dir / PATCH_FILE).write_text(_git_patch(Path.cwd()))
+        meta["environment"]["git"]["patch"] = PATCH_FILE
     write_meta(run_dir, meta)
     return run_dir
 

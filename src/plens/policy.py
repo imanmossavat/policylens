@@ -138,6 +138,11 @@ def _bundle(cfg: PreTrainedConfig, env_cfg: EnvConfig, pretrained: Path | None, 
 
 def load_pretrained(repo_or_path: str, env_cfg: EnvConfig, device: str = "auto",
                     revision: str | None = None) -> PolicyBundle:
+    from lerobot.utils.import_utils import register_third_party_plugins
+
+    # WHY: policy types from installed lerobot_policy_* packages (e.g. flow_matching) only
+    # exist once registered; LeRobot's own CLIs do the same.
+    register_third_party_plugins()
     device = pick_device(device)
     local, source = resolve_checkpoint(repo_or_path, revision)
     cfg = PreTrainedConfig.from_pretrained(local)
@@ -160,3 +165,54 @@ def load_random_diffusion(env_cfg: EnvConfig, device: str = "auto", **overrides:
               "use_separate_rgb_encoder_per_camera": False, **overrides}
     cfg = DiffusionConfig(device=device, **kwargs)
     return _bundle(cfg, env_cfg, None, device, {"kind": "random_init", "overrides": kwargs})
+
+
+SAMPLERS = ("ddpm", "ddim")
+
+
+def set_sampler(bundle: PolicyBundle, sampler: str | None = None, steps: int | None = None,
+                n_action_steps: int | None = None) -> dict[str, Any]:
+    """Change how a loaded policy samples, without retraining. Returns what is now set (for meta.json).
+
+    sampler: "ddpm" or "ddim", diffusion only; the trained denoiser is unchanged, only the
+      update rule between passes. steps: denoising passes (diffusion) or ODE steps (flow)
+      per re-plan. n_action_steps: actions executed per re-plan, at most
+      horizon - n_obs_steps + 1. Call before the first episode; reset() reads it.
+    """
+    policy, cfg = bundle.policy, bundle.policy.config
+    model = getattr(policy, "diffusion", None)
+    if sampler is not None:
+        if model is None or not hasattr(model, "noise_scheduler"):
+            raise ValueError(f"sampler={sampler!r} applies to diffusion policies, not {cfg.type!r}")
+        if sampler not in SAMPLERS:
+            raise ValueError(f"sampler must be one of {SAMPLERS}, got {sampler!r}")
+        from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+        from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+
+        kw = dict(num_train_timesteps=cfg.num_train_timesteps, beta_start=cfg.beta_start,
+                  beta_end=cfg.beta_end, beta_schedule=cfg.beta_schedule, clip_sample=cfg.clip_sample,
+                  clip_sample_range=cfg.clip_sample_range, prediction_type=cfg.prediction_type)
+        model.noise_scheduler = (DDPMScheduler if sampler == "ddpm" else DDIMScheduler)(**kw)
+    if steps is not None:
+        if model is not None:
+            model.num_inference_steps = steps  # diffusion copies it from the config at init
+        cfg.num_inference_steps = steps        # flow matching reads the config at call time
+    if n_action_steps is not None:
+        limit = cfg.horizon - cfg.n_obs_steps + 1
+        if not 1 <= n_action_steps <= limit:
+            raise ValueError(f"n_action_steps must be in 1..{limit} for horizon {cfg.horizon}")
+        cfg.n_action_steps = n_action_steps
+    return describe_sampling(bundle)
+
+
+def describe_sampling(bundle: PolicyBundle) -> dict[str, Any]:
+    """Sampler, passes per re-plan, horizon and re-plan interval actually in effect."""
+    policy, cfg = bundle.policy, bundle.policy.config
+    model = getattr(policy, "diffusion", None)
+    if model is not None and hasattr(model, "noise_scheduler"):
+        sampler = type(model.noise_scheduler).__name__.removesuffix("Scheduler").lower()
+        steps = model.num_inference_steps
+    else:
+        sampler, steps = getattr(cfg, "ode_solver", cfg.type), cfg.num_inference_steps
+    return {"sampler": sampler, "steps": steps, "horizon": cfg.horizon,
+            "n_action_steps": cfg.n_action_steps, "n_obs_steps": cfg.n_obs_steps}

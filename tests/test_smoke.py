@@ -126,3 +126,48 @@ def test_saved_run_reloads(tmp_path, bundle, env_cfg):
     loaded = store.load_episode(tmp_path, 0)
     assert set(loaded["act"]) == set(LAYERS)
     assert loaded["trace"]["action"].shape == (MAX_STEPS, 2)
+
+
+def test_batch_of_one_equals_run_episode(bundle, env_cfg):
+    from plens.rollout import run_batch
+
+    venv = make_single_env(env_cfg)
+    a = run_episode(bundle, venv, seed=3)
+    b = run_batch(bundle, venv, [3])[0]
+    venv.close()
+    np.testing.assert_array_equal(a.trace["action"], b.trace["action"])
+
+
+def test_batched_rollout_records_each_env(bundle, env_cfg):
+    from plens.envs import make_envs
+    from plens.record import select_env
+    from plens.rollout import run_batch
+
+    venv = make_envs(env_cfg, 3)
+    with ActivationRecorder(bundle.policy, LAYERS) as rec:
+        eps = run_batch(bundle, venv, [10, 11, 12], rec, render=(1,))
+    venv.close()
+    assert [ep.seed for ep in eps] == [10, 11, 12] and all(ep.n_steps == MAX_STEPS for ep in eps)
+    assert len(eps[1].frames) == MAX_STEPS and not eps[0].frames
+    # Different seeds start in different states, so the envs really are separate.
+    assert not np.allclose(eps[0].trace["block_pose"][0], eps[1].trace["block_pose"][0])
+    one = select_env(rec.to_arrays(), env=2, n_envs=3, n_steps=eps[2].n_steps)
+    n_obs = bundle.policy.config.n_obs_steps
+    assert one["diffusion.rgb_encoder"]["value"].shape[1] == n_obs
+    assert one["diffusion.unet.mid_modules.1"]["value"].shape[1] == 1
+
+
+def test_set_sampler_switches_to_ddim(env_cfg):
+    from plens.policy import set_sampler
+
+    b = load_random_diffusion(env_cfg, "cpu", num_inference_steps=3)
+    s = set_sampler(b, "ddim", steps=2, n_action_steps=4)
+    assert s["sampler"] == "ddim" and s["steps"] == 2 and s["n_action_steps"] == 4
+    venv = make_single_env(env_cfg)
+    with ActivationRecorder(b.policy, LAYERS) as rec:
+        run_episode(b, venv, seed=0, recorder=rec)
+    venv.close()
+    unet = rec.to_arrays()["diffusion.unet.mid_modules.1"]
+    assert unet["call"].max() == 1 and set(unet["step"]) == set(range(0, MAX_STEPS, 4))
+    with pytest.raises(ValueError):
+        set_sampler(b, n_action_steps=99)

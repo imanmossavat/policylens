@@ -83,3 +83,16 @@ def test_list_layers_skips_containers():
 def test_pool_keeps_batch_and_channel():
     assert pool(torch.ones(2, 3, 4, 5)).shape == (2, 3)
     assert pool(torch.ones(2, 3)).shape == (2, 3)
+
+
+def test_select_env_splits_env_major_blocks_and_drops_steps_after_done():
+    from plens.record import select_env
+
+    # 2 envs; "enc" has 2 rows per env (one per observation frame), "unet" 1 row per env.
+    steps = np.array([0, 0, 8, 8])
+    acts = {"enc": {"step": steps, "call": np.zeros(4, int), "value": np.arange(4 * 4 * 3).reshape(4, 4, 3)},
+            "unet": {"step": steps, "call": np.array([0, 1, 0, 1]), "value": np.arange(4 * 2 * 3).reshape(4, 2, 3)}}
+    one = select_env(acts, env=1, n_envs=2, n_steps=5)  # env 1 ended at step 5
+    assert one["enc"]["value"].shape == (2, 2, 3) and one["unet"]["value"].shape == (2, 1, 3)
+    np.testing.assert_array_equal(one["enc"]["value"], acts["enc"]["value"][:2, 2:4])
+    np.testing.assert_array_equal(one["unet"]["step"], [0, 0])

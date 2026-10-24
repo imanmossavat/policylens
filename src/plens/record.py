@@ -97,3 +97,21 @@ class ActivationRecorder:
                 "value": np.stack([r[2] for r in recs]),
             }
         return out
+
+
+def select_env(acts: dict[str, dict[str, np.ndarray]], env: int, n_envs: int, n_steps: int
+               ) -> dict[str, dict[str, np.ndarray]]:
+    """One env's records from a batched recording, in the per-episode format save_episode expects.
+
+    Axis 1 of each value holds n_envs equal blocks, env-major: the denoiser has one row per
+    env, the image encoder one per (env, observation frame), since LeRobot flattens
+    "(b s n)". Keeps only steps < n_steps: after its episode ends an env autoresets and
+    keeps running until the whole batch is done; those records are not its.
+    """
+    out = {}
+    for name, a in acts.items():
+        rows = a["value"].shape[1] // n_envs
+        keep = a["step"] < n_steps
+        out[name] = {"step": a["step"][keep], "call": a["call"][keep],
+                     "value": a["value"][keep][:, env * rows:(env + 1) * rows]}
+    return out
