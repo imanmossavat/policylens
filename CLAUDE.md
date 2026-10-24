@@ -9,6 +9,7 @@ PushT is only the training ground for the toolkit (D-001).
 | Setup and commands | README.md | |
 | Code map | src/plens/__init__.py docstring | |
 | Run folder layout | src/plens/store.py | `LAYOUT` |
+| Tasks and what each records | src/plens/envs.py | `TASKS` |
 | Why something is the way it is | docs/decisions.md | `D-0` |
 | Traps already hit | docs/gotchas.md, plus code sites | `G-0`, `GOTCHA(` |
 | Results so far | docs/findings.md | `F-0` |
@@ -22,6 +23,7 @@ Searching an ID (e.g. `G-001`) finds its doc line and every code line that cites
 - Functions live in src/plens/ with tests in tests/. Scripts in scripts/ only parse args and call the library.
   Notebooks (later, notebooks/) are for teaching and exploring; they import, never define, library code.
 - Every run writes runs/<run_id>/meta.json: code commit, versions, device, config, seeds, outcome.
+  Run IDs are UTC; a run from uncommitted code also saves git_diff.patch.
 - `pytest -m "not smoke"` is fast; plain `pytest` also runs the real env and policy architecture.
 - Before building or training on a new task: check existing benchmarks for it, and run a trivial controller.
   If the trivial controller solves it, tell the user; never redesign an env without their permission.
