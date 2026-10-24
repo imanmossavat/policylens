@@ -6,6 +6,9 @@ LAYOUT runs/<run_id>/
   episodes.jsonl         one summary line per episode; the index to scan first
   episodes/ep_00000.npz  trace/<key> arrays, plus act/<layer>/{step,call,value}
   videos/ep_00000.mp4    optional, first --video N episodes
+  fate.jsonl             fate runs only (scripts/fate.py): one line per snapshot, p(success) from there
+  assembled.npz          extraction runs only (scripts/disassembly.py): frozen assembled states
+  extraction.json        extraction runs only: stage counts per scripted replay length
 """
 
 from __future__ import annotations

@@ -23,6 +23,17 @@ First run downloads `lerobot/diffusion_pusht` and converts it once (G-001).
 One episode takes ~30-45 s on an M4 Max (G-006). `--batch-size` shares each policy pass between envs:
 use it for statistics; keep batch 1 to reproduce a run seed for seed (G-008). Long runs on mps: G-007.
 Another LeRobot policy plugin (e.g. `lerobot_policy_flow_matching`) loads with `--policy <repo>` once installed.
+
+## Other tasks and tools
+```bash
+python scripts/rollouts.py --task aloha_insertion --n 100 --batch-size 25 --name act_insertion   # ACT, peg in socket
+python scripts/fate.py --seeds 1 3 7 --branches 50 --sampler ddim --inference-steps 10       # fate curves (Q-011)
+python scripts/fate_plot.py runs/<fate run>                                                  # figure in exports/
+python scripts/probe_contact.py runs/<aloha run with --temporal-ensemble 0.01> [--target force]  # Q-012
+python scripts/disassembly.py baseline --from-run runs/<insertion run>                       # extraction (F-008)
+python scripts/square_force.py                                                               # in a robosuite env
+```
+Tasks and what each records: `TASKS` in src/plens/envs.py. ALOHA needs gym-aloha; robosuite needs mujoco==3.3.0.
 Results land in `runs/<run_id>/`; see `LAYOUT` in src/plens/store.py.
 
 ## Explore (no robot needed)

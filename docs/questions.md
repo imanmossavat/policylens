@@ -9,3 +9,6 @@ Q-007 open diff:B Does a Square (nut-on-peg) policy encode "aligned with peg" th
 Q-008 open diff:F Do assembly and disassembly policies for Square share representations of alignment?
 Q-009 answered by F-004, F-006 Is rollout time set by the chain of denoising passes (100 per re-plan, mostly fixed GPU overhead), and what do fewer steps, batched episodes or many plans per state buy? Plain-language: https://claude.ai/artifact/9BYR9vs69p9nkcs71eozGG
 Q-010 open diff:A From one frozen state, sample 32 plans in one batched pass: how often does each go left or right around the T, and do failures start where the split is near 50/50? (F-003: noise decides most outcomes.)
+Q-011 active diff:A,F Is an episode's outcome decided at identifiable moments or spread over the episode? Branch K continuations from each re-plan (fate curve); does plan spread or a probe see the drops coming? (scripts/fate.py)
+Q-012 active (F-011: contact yes, force no) diff:B,C Does a vision-only policy (ACT, ALOHA insertion) encode peg-socket contact it never senses? Probe activations for simulator contact; if near-misses lack it, force sensing (round 2) should fix exactly those.
+Q-013 open diff:D Why does re-planning ACT more often make it crawl (F-013)? Test: does the first part of each chunk lag the demonstrated speed, and does giving it 2 frames (velocity) remove the collapse?

@@ -171,13 +171,15 @@ SAMPLERS = ("ddpm", "ddim")
 
 
 def set_sampler(bundle: PolicyBundle, sampler: str | None = None, steps: int | None = None,
-                n_action_steps: int | None = None) -> dict[str, Any]:
+                n_action_steps: int | None = None, temporal_ensemble: float | None = None) -> dict[str, Any]:
     """Change how a loaded policy samples, without retraining. Returns what is now set (for meta.json).
 
     sampler: "ddpm" or "ddim", diffusion only; the trained denoiser is unchanged, only the
       update rule between passes. steps: denoising passes (diffusion) or ODE steps (flow)
       per re-plan. n_action_steps: actions executed per re-plan, at most
       horizon - n_obs_steps + 1. Call before the first episode; reset() reads it.
+    temporal_ensemble: re-plan every step and average the overlapping chunks with weights
+      exp(-coeff * age) (the ACT paper uses 0.01). ACT natively; diffusion via _ensemble_diffusion.
     """
     policy, cfg = bundle.policy, bundle.policy.config
     model = getattr(policy, "diffusion", None)
@@ -197,12 +199,56 @@ def set_sampler(bundle: PolicyBundle, sampler: str | None = None, steps: int | N
         if model is not None:
             model.num_inference_steps = steps  # diffusion copies it from the config at init
         cfg.num_inference_steps = steps        # flow matching reads the config at call time
+    if temporal_ensemble is not None:
+        from lerobot.policies.act.modeling_act import ACTTemporalEnsembler
+
+        if cfg.type == "act":
+            cfg.temporal_ensemble_coeff, cfg.n_action_steps = temporal_ensemble, 1
+            policy.temporal_ensembler = ACTTemporalEnsembler(temporal_ensemble, cfg.chunk_size)
+        elif model is not None:
+            _ensemble_diffusion(policy, temporal_ensemble)
+        else:
+            raise ValueError(f"temporal_ensemble supports ACT and diffusion, not {cfg.type!r}")
     if n_action_steps is not None:
-        limit = cfg.horizon - cfg.n_obs_steps + 1
+        horizon = getattr(cfg, "horizon", None) or cfg.chunk_size  # ACT calls it chunk_size
+        limit = horizon - cfg.n_obs_steps + 1
         if not 1 <= n_action_steps <= limit:
-            raise ValueError(f"n_action_steps must be in 1..{limit} for horizon {cfg.horizon}")
+            raise ValueError(f"n_action_steps must be in 1..{limit} for horizon {horizon}")
         cfg.n_action_steps = n_action_steps
     return describe_sampling(bundle)
+
+
+def _ensemble_diffusion(policy, coeff: float) -> None:
+    """Re-plan a diffusion policy every step and average overlapping chunks, as ACT does.
+
+    Each step samples a full usable chunk (horizon - n_obs_steps + 1 actions) and blends it
+    with the still-valid parts of earlier chunks, weights exp(-coeff * age). WHY: tests whether
+    chunk blending, which rescues ACT at short re-plan intervals (F-013), also rescues a
+    sampling policy, whose chunks may disagree on the mode (F-014).
+    """
+    from lerobot.policies.act.modeling_act import ACTTemporalEnsembler
+    from lerobot.policies.utils import populate_queues
+    from lerobot.utils.constants import ACTION, OBS_IMAGES
+
+    cfg = policy.config
+    cfg.n_action_steps = cfg.horizon - cfg.n_obs_steps + 1
+    ensembler = ACTTemporalEnsembler(coeff, cfg.n_action_steps)
+    reset = policy.reset
+
+    def select_action(batch, noise=None):
+        batch = dict(batch)
+        batch.pop(ACTION, None)
+        if cfg.image_features:
+            batch[OBS_IMAGES] = torch.stack([batch[k] for k in cfg.image_features], dim=-4)
+        policy._queues = populate_queues(policy._queues, batch)
+        return ensembler.update(policy.predict_action_chunk(batch, noise=noise))
+
+    def reset_all():
+        reset()
+        ensembler.reset()
+
+    policy.select_action, policy.reset = select_action, reset_all
+    cfg.temporal_ensemble_coeff = coeff
 
 
 def describe_sampling(bundle: PolicyBundle) -> dict[str, Any]:
@@ -212,7 +258,10 @@ def describe_sampling(bundle: PolicyBundle) -> dict[str, Any]:
     if model is not None and hasattr(model, "noise_scheduler"):
         sampler = type(model.noise_scheduler).__name__.removesuffix("Scheduler").lower()
         steps = model.num_inference_steps
-    else:
-        sampler, steps = getattr(cfg, "ode_solver", cfg.type), cfg.num_inference_steps
-    return {"sampler": sampler, "steps": steps, "horizon": cfg.horizon,
-            "n_action_steps": cfg.n_action_steps, "n_obs_steps": cfg.n_obs_steps}
+    else:  # flow matching: ODE solver; ACT: one deterministic pass, no sampler
+        sampler = getattr(cfg, "ode_solver", cfg.type)
+        steps = getattr(cfg, "num_inference_steps", 1)
+    horizon = getattr(cfg, "horizon", None) or getattr(cfg, "chunk_size", None)
+    return {"sampler": sampler, "steps": steps, "horizon": horizon,
+            "n_action_steps": cfg.n_action_steps, "n_obs_steps": cfg.n_obs_steps,
+            "temporal_ensemble": getattr(cfg, "temporal_ensemble_coeff", None)}

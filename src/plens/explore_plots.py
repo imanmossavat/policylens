@@ -121,3 +121,33 @@ def activation_view(ax_proj, ax_jump, e: EpisodeView, layer: str, t: int | None 
     ax_jump.set(title="how much the layer changed at each re-plan\n(high = it saw or planned something different)",
                 xlabel="environment step", ylabel="size of change")
     ax_jump.title.set_fontsize(8)
+
+
+def fate_curves(ax, curves: dict, title: str | None = None) -> None:
+    """p(success | state) vs step for each parent episode, coloured by the parent's outcome.
+
+    Each point: of the branches started from that exact state with fresh sampling noise,
+    the fraction that succeeded. A cliff = a moment that decided the episode.
+    """
+    for idx, c in sorted(curves.items()):
+        ax.plot(c["step"], c["p"], "-", color=color(c["label"]), lw=1.4, alpha=0.85)
+        ax.annotate(str(c["seed"]), (c["step"][-1], c["p"][-1]), xytext=(4, 0), textcoords="offset points",
+                    fontsize=7, color=color(c["label"]), va="center")
+    ax.set_ylim(-0.03, 1.03)
+    ax.set_xlabel("environment step where the branches start (time →)")
+    ax.set_ylabel("p(success) from this state\n(fraction of branches that succeed)")
+    handles = [ax.plot([], [], color=color(l), label=f"parent: {l}")[0]
+               for l in ("success", "near_miss", "fail") if any(c["label"] == l for c in curves.values())]
+    ax.legend(handles=handles, loc="best", fontsize=8, framealpha=0.8)
+    if title:
+        ax.set_title(title, fontsize=9)
+
+
+def spread_vs_uncertainty(ax, curves: dict, title: str | None = None) -> None:
+    """Plan spread at a state vs how open its fate is (p(1-p), largest at p = 0.5)."""
+    for c in curves.values():
+        ax.scatter(c["plan_spread"], c["p"] * (1 - c["p"]), s=10, color=color(c["label"]), alpha=0.6)
+    ax.set_xlabel("plan spread at the state (px, RMS distance of sampled plans from their mean)")
+    ax.set_ylabel("open fate p(1 - p)\n0 = decided, 0.25 = coin flip")
+    if title:
+        ax.set_title(title, fontsize=9)

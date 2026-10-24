@@ -171,3 +171,42 @@ def test_set_sampler_switches_to_ddim(env_cfg):
     assert unet["call"].max() == 1 and set(unet["step"]) == set(range(0, MAX_STEPS, 4))
     with pytest.raises(ValueError):
         set_sampler(b, n_action_steps=99)
+
+
+def test_branch_replays_parent_exactly_and_runs_k_branches(env_cfg):
+    from plens.branch import SnapshotTaker, fate_curve, run_branches
+    from plens.envs import make_envs
+    from plens.policy import set_sampler
+    from plens.rollout import run_batch
+
+    bundle = load_random_diffusion(env_cfg, "cpu", num_inference_steps=3)
+    set_sampler(bundle, n_action_steps=4)  # 3 re-plans in a 12-step episode
+    cfg = bundle.policy.config
+    taker = SnapshotTaker(cfg.n_obs_steps, cfg.n_action_steps, cfg.n_action_steps)
+    parent = run_batch(bundle, make_single_env(env_cfg), [2], on_step=taker)[0]
+    snap = taker.snapshots[1]  # the second re-plan: physics, time limit, obs history and RNG restored
+    s = snap.step
+    replay, _ = run_branches(bundle, make_single_env(env_cfg), snap, noise_seed=None)
+    np.testing.assert_allclose(replay[0].trace["block_pose"], parent.trace["block_pose"][s:], atol=1e-9)
+    np.testing.assert_array_equal(replay[0].trace["action"], parent.trace["action"][s:])
+    eps, plans = run_branches(bundle, make_envs(env_cfg, 3), snap, noise_seed=1)
+    assert len(eps) == 3 and all(e.n_steps == MAX_STEPS - s for e in eps)
+    assert plans.shape[0] == 3 and plans.shape[2] == 2
+    _, rows = fate_curve(bundle, env_cfg, seed=2, n_branches=2, every=cfg.n_action_steps)
+    assert [r["step"] for r in rows] == list(range(0, MAX_STEPS, cfg.n_action_steps))
+    with pytest.raises(ValueError):
+        SnapshotTaker(cfg.n_obs_steps, cfg.n_action_steps + 1, cfg.n_action_steps)
+
+
+def test_diffusion_chunk_averaging_replans_every_step(env_cfg):
+    from plens.policy import set_sampler
+
+    b = load_random_diffusion(env_cfg, "cpu", num_inference_steps=2)
+    s = set_sampler(b, temporal_ensemble=0.01)
+    assert s["temporal_ensemble"] == 0.01 and s["n_action_steps"] == b.policy.config.horizon - 1
+    venv = make_single_env(env_cfg)
+    with ActivationRecorder(b.policy, LAYERS) as rec:
+        ep = run_episode(b, venv, seed=0, recorder=rec)
+    venv.close()
+    assert set(rec.to_arrays()["diffusion.rgb_encoder"]["step"]) == set(range(MAX_STEPS))
+    assert ep.trace["action"].shape == (MAX_STEPS, 2)

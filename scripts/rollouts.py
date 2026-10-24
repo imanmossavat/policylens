@@ -1,9 +1,10 @@
-"""Run a policy on PushT for N episodes; save traces, activations, videos and metadata.
+"""Run a policy on a task for N episodes; save traces, activations, videos and metadata.
 
   python scripts/rollouts.py --n 100 --name baseline
   python scripts/rollouts.py --n 500 --batch-size 50 --layers --video 0 --name eval   # fast stats
   python scripts/rollouts.py --n 500 --batch-size 50 --sampler ddim --inference-steps 10 --name ddim10
   python scripts/rollouts.py --list-layers
+  python scripts/rollouts.py --task aloha_insertion --n 50 --batch-size 10 --name act_insertion
   python scripts/rollouts.py --random-weights --n 3 --max-steps 30   # offline check
 
 --batch-size 1 (default) reproduces earlier runs exactly; larger batches share each
@@ -17,9 +18,8 @@ import time
 import traceback
 
 from plens import labels, store
-from plens.envs import make_envs, pusht_config
-from plens.policy import (DIFFUSION_PUSHT_LAYERS, SAMPLERS, describe_sampling, load_pretrained,
-                          load_random_diffusion, set_sampler)
+from plens.envs import TASKS, make_envs
+from plens.policy import SAMPLERS, load_pretrained, load_random_diffusion, set_sampler
 from plens.record import ActivationRecorder, list_layers, select_env
 from plens.rollout import run_batch
 from plens.runmeta import new_run, update_meta
@@ -27,7 +27,8 @@ from plens.runmeta import new_run, update_meta
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--policy", default="lerobot/diffusion_pusht", help="Hub repo id or local dir")
+    p.add_argument("--task", choices=sorted(TASKS), default="pusht", help="ALOHA tasks need the plens-aloha env")
+    p.add_argument("--policy", default=None, help="Hub repo id or local dir; default: the task's (envs.TASKS)")
     p.add_argument("--revision", default=None, help="Hub revision; resolved commit goes in meta.json")
     p.add_argument("--random-weights", action="store_true", help="Untrained policy, no download")
     p.add_argument("--n", type=int, default=50, help="Number of episodes")
@@ -38,8 +39,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--sampler", choices=SAMPLERS, default=None, help="Diffusion only; default: checkpoint's")
     p.add_argument("--inference-steps", type=int, default=None, help="Denoising passes / ODE steps per re-plan")
     p.add_argument("--n-action-steps", type=int, default=None, help="Actions executed per re-plan")
-    p.add_argument("--max-steps", type=int, default=300)
-    p.add_argument("--layers", nargs="*", default=DIFFUSION_PUSHT_LAYERS, help="Layers to record; none to skip")
+    p.add_argument("--temporal-ensemble", type=float, default=None,
+                   help="ACT or diffusion: re-plan every step and average chunks (ACT paper: 0.01)")
+    p.add_argument("--max-steps", type=int, default=None, help="Default: the task's episode length")
+    p.add_argument("--layers", nargs="*", default=None, help="Layers to record; default: the task's; none to skip")
     p.add_argument("--no-pool", action="store_true", help="Keep full activation shapes (large files)")
     p.add_argument("--all-calls", action="store_true",
                    help="Keep every denoising pass, not just the last (about 100x larger files)")
@@ -53,10 +56,15 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    env_cfg = pusht_config(args.max_steps)
+    task = TASKS[args.task]
+    args.policy = args.policy or task.policy
+    args.max_steps = args.max_steps or task.max_steps
+    args.layers = list(task.layers) if args.layers is None else args.layers
+    env_cfg = task.make_config(args.max_steps)
     bundle = (load_random_diffusion(env_cfg, args.device) if args.random_weights
               else load_pretrained(args.policy, env_cfg, args.device, args.revision))
-    sampling = set_sampler(bundle, args.sampler, args.inference_steps, args.n_action_steps)
+    sampling = set_sampler(bundle, args.sampler, args.inference_steps, args.n_action_steps,
+                           args.temporal_ensemble)
 
     if args.list_layers:
         for name, cls in list_layers(bundle.policy, max_depth=4):
@@ -64,7 +72,7 @@ def main() -> None:
         return
 
     run_dir = new_run(args.runs_dir, args.name, config={
-        **vars(args), "near_miss_coverage": labels.NEAR_MISS_COVERAGE})
+        **vars(args), "near_miss_progress": task.near_miss, "progress": task.note})
     update_meta(run_dir, policy=bundle.source, sampling=sampling)
     print(f"Run: {run_dir}  {sampling}  batch {args.batch_size}")
     started = time.time()
@@ -84,19 +92,19 @@ def main() -> None:
             noise_seed = seeds[0] + args.noise_seed_offset
             if args.layers:
                 with ActivationRecorder(bundle.policy, args.layers, not args.no_pool) as rec:
-                    eps = run_batch(bundle, venv, seeds, rec, render, noise_seed)
+                    eps = run_batch(bundle, venv, seeds, rec, render, noise_seed, task=task)
                 acts = rec.to_arrays(calls="all" if args.all_calls else "last")
             else:
-                eps, acts = run_batch(bundle, venv, seeds, None, render, noise_seed), None
+                eps, acts = run_batch(bundle, venv, seeds, None, render, noise_seed, task=task), None
             lockstep_steps += max(ep.n_steps for ep in eps)
             for j, (i, ep) in enumerate(zip(idxs, eps)):
                 env_steps += ep.n_steps
-                label = labels.outcome_label(ep.success, ep.max_coverage)
+                label = labels.outcome_label(ep.success, ep.max_coverage, task.near_miss)
                 ep_acts = select_env(acts, j, len(seeds), ep.n_steps) if acts else None
                 store.save_episode(run_dir, i, ep, label, ep_acts)
                 if ep.frames:
                     store.save_video(run_dir, i, ep.frames, fps=env_cfg.fps)
-                print(f"  ep {i:3d} seed {ep.seed:4d}  {label:9s} max_cov {ep.max_coverage:.3f}  "
+                print(f"  ep {i:3d} seed {ep.seed:4d}  {label:9s} max_progress {ep.max_coverage:.3f}  "
                       f"steps {ep.n_steps}")
         duration = time.time() - started
         summary = labels.summarize(store.read_index(run_dir))

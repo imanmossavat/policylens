@@ -40,3 +40,15 @@ def test_compare_pairs_against_first_run():
     rows = labels.compare({"ref": [line(0, True), line(1, False)], "new": [line(0, False), line(1, False)]})
     assert rows[0]["k"] == 1 and "vs_ref" not in rows[0]
     assert rows[1]["vs_ref"]["only_a"] == 1 and rows[1]["vs_ref"]["only_b"] == 0
+
+
+def test_fate_stats_finds_the_deciding_moment():
+    from plens.branch import fate_stats
+
+    steps = np.arange(0, 80, 8)
+    cliff = {"step": steps, "n": np.full(10, 50), "p": np.array([.6, .6, .62, .58, .6, .02, 0, 0, 0, 0])}
+    s = fate_stats(cliff)
+    assert s["largest_change_step"] == 40 and s["largest_change"] < -0.5
+    assert s["decisiveness"] > 0.8 and s["sealed_step"] == 40
+    drift = {"step": steps, "n": np.full(10, 50), "p": np.linspace(0.6, 0.0, 10)}
+    assert fate_stats(drift)["decisiveness"] < 0.2
