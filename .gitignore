@@ -11,3 +11,6 @@ __pycache__/
 .cache/
 runs/
 exports/
+
+# the user's own reading index (links to private claude.ai docs)
+docs/readable.md

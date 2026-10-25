@@ -15,6 +15,7 @@ PushT is only the training ground for the toolkit (D-001).
 | Results so far | docs/findings.md | `F-0` |
 | Open research questions | docs/questions.md | `Q-0` |
 | Tasks and the assembly difficulty each isolates | docs/tasks.md | `diff:A` ... `diff:F` |
+| Human-readable story docs (user's own, don't read unless asked) | docs/readable.md | |
 
 Searching an ID (e.g. `G-001`) finds its doc line and every code line that cites it.
 
