@@ -14,3 +14,4 @@ Q-012 active (F-011: contact yes, force no) diff:B,C Does a vision-only policy (
 Q-013 open diff:D Why does re-planning ACT more often make it crawl (F-013)? Test: does the first part of each chunk lag the demonstrated speed, and does giving it 2 frames (velocity) remove the collapse?
 Q-014 open diff:A,F Is the late fade of PushT near-misses (F-017) the 300-step limit or the policy? Re-branch their late snapshots with max_steps 600.
 Q-015 open diff:B,D Does ALOHA insertion flip outcomes under tiny start or numeric perturbations as PushT flips under noise (F-018)? ACT has no sampling noise (F-013), so test ~20 repeats on 25-30 stratified starts.
+Q-016 open diff:D,F Are Square near misses partly timeouts (F-021)? Ep 6 of 20261028-040459_square_dppo_ema_n300 grasps at step ~280, then bumps the peg at 40-70 N until step 400. Rerun near-miss starts with max_steps 800; does force show the jam first?

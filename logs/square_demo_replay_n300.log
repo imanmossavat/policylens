@@ -1,0 +1,5 @@
+[robosuite WARNING] No private macro file found! (macros.py:53)
+[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
+[robosuite WARNING] To setup, run: python /opt/miniconda3/envs/plens-dppo/lib/python3.12/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
+runs/20261028-040503_square_demo_replay_n300
+{"n_demos": 300, "replay_success": 211, "rate": 0.7033}

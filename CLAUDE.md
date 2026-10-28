@@ -10,7 +10,8 @@ PushT is only the training ground for the toolkit (D-001).
 | Code map | src/plens/__init__.py docstring | |
 | Run folder layout | src/plens/store.py | `LAYOUT` |
 | Tasks and what each records | src/plens/envs.py | `TASKS` |
-| Why something is the way it is | docs/decisions.md | `D-0` |
+| Why something is the way it is (decision log) | docs/decisions.md | `D-0` |
+| Models, checkpoints, data on disk; conda envs | docs/assets.md | |
 | Traps already hit | docs/gotchas.md, plus code sites | `G-0`, `GOTCHA(` |
 | Results so far | docs/findings.md | `F-0` |
 | Open research questions | docs/questions.md | `Q-0` |

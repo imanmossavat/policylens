@@ -15,7 +15,8 @@ def test_insertion_observes_ground_truth_contact():
     obs = venv.step(np.zeros((1, 14), dtype=np.float32))[0]
     gt = ALOHA_INSERTION.observe(venv.envs[0])
     venv.close()
-    assert set(gt) == {"peg_pos", "socket_pos", "peg_socket_force", "peg_socket_contacts", "agent_pos"}
+    assert set(gt) == {"peg_pos", "socket_pos", "peg_quat", "socket_quat", "peg_socket_force", "peg_socket_contacts",
+                       "agent_pos"}
     assert gt["peg_pos"].shape == (3,) and gt["peg_socket_force"] >= 0
     assert "top" in obs["pixels"]
 

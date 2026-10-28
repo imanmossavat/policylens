@@ -15,6 +15,7 @@ Index of modules (grep the name to jump):
   probe     - linear probes on activations for simulator ground truth, split by episode (Q-012)
   disassembly - ALOHA extraction: frozen assembled states, scripted extractors, demos, evaluation (F-008/F-009)
   forcecheck - robosuite Square wrist force sanity check (plens-robosuite env)
+  square    - robosuite Square + DPPO pretrained diffusion: env, policy, batched rollouts with force, demo replay (plens-dppo env)
 """
 
 __version__ = "0.1.0"

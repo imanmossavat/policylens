@@ -1,0 +1,18 @@
+[robosuite WARNING] No private macro file found! (macros.py:53)
+WARNING:robosuite_logs:No private macro file found!
+[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
+WARNING:robosuite_logs:It is recommended to use a private macro file
+[robosuite WARNING] To setup, run: python /opt/miniconda3/envs/plens-dppo/lib/python3.12/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
+WARNING:robosuite_logs:To setup, run: python /opt/miniconda3/envs/plens-dppo/lib/python3.12/site-packages/robosuite/scripts/setup_macros.py
+runs/20261028-042110_square_dppo_dice_10x8
+8/80 episodes, success 5, 25s
+16/80 episodes, success 6, 57s
+24/80 episodes, success 9, 87s
+32/80 episodes, success 9, 116s
+40/80 episodes, success 9, 140s
+48/80 episodes, success 11, 162s
+56/80 episodes, success 12, 187s
+64/80 episodes, success 19, 204s
+72/80 episodes, success 19, 228s
+80/80 episodes, success 21, 251s
+{"n_episodes": 80, "success_rate": 0.2625, "success_ci95": [0.1786, 0.3682], "labels": {"fail": 48, "near_miss": 11, "success": 21}, "mean_max_coverage": 0.4162, "mean_steps": 360.6}

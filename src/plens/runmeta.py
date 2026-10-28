@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 META_FILE = "meta.json"
-TRACKED_PACKAGES = ("plens", "lerobot", "gym-pusht", "torch", "numpy", "gymnasium")
+TRACKED_PACKAGES = ("plens", "lerobot", "gym-pusht", "torch", "numpy", "gymnasium", "robosuite", "mujoco")
 
 
 def _git_info(cwd: Path) -> dict[str, Any] | None:

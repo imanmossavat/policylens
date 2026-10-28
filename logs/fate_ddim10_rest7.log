@@ -1,0 +1,13 @@
+Fetching 8 files:   0%|          | 0/8 [00:00<?, ?it/s]Fetching 8 files: 100%|██████████| 8/8 [00:00<00:00, 13294.15it/s]
+/opt/miniconda3/envs/lerobot-gestures/lib/python3.12/site-packages/pygame/pkgdata.py:25: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import resource_stream, resource_exists
+Loading weights from local directory
+Run: runs/20261024-154946_fate_ddim10_rest7  {'sampler': 'ddim', 'steps': 10, 'horizon': 16, 'n_action_steps': 8, 'n_obs_steps': 2, 'temporal_ensemble': None}
+gym id 'gym_pusht/PushT-v0' not found, attempting to import 'gym_pusht'...
+  seed 8: parent fail in 300 steps; p(success) by snapshot: 0.28 0.26 0.40 0.44 0.34 0.40 0.38 0.32 0.40 0.36 0.38 0.40 0.36 0.30 0.62 0.66 0.58 0.48 0.60 0.42 0.54 0.66 0.68 0.62 0.74 0.82 0.58 0.32 0.12 0.00 0.00 0.00 0.00 0.06 0.00 0.00 0.00 0.00
+  seed 3: parent success in 136 steps; p(success) by snapshot: 0.66 0.72 0.74 0.68 0.74 0.70 0.68 0.68 0.50 0.70 0.72 0.64 0.68 0.54 0.82 0.84 0.92
+  seed 6: parent success in 127 steps; p(success) by snapshot: 0.48 0.36 0.70 0.76 0.80 0.64 0.86 0.92 0.94 0.96 0.70 0.88 0.98 0.94 0.94 0.98
+  seed 9: parent success in 143 steps; p(success) by snapshot: 0.58 0.80 0.70 0.72 0.78 0.76 0.72 0.82 0.80 0.74 0.78 0.76 0.86 0.94 0.98 1.00 1.00 1.00
+  seed 10: parent success in 72 steps; p(success) by snapshot: 0.82 0.72 0.42 0.82 1.00 1.00 0.98 0.98 1.00
+  seed 11: parent success in 167 steps; p(success) by snapshot: 0.70 0.74 0.68 0.72 0.70 0.80 0.72 0.58 0.68 0.52 0.52 0.58 0.54 0.46 0.44 0.54 0.70 0.70 0.86 0.82 1.00
+  seed 13: parent success in 95 steps; p(success) by snapshot: 0.76 0.84 0.86 0.80 0.78 0.86 0.88 0.80 0.90 0.86 0.94 1.00

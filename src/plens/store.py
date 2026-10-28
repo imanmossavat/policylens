@@ -15,11 +15,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .rollout import Episode
+if TYPE_CHECKING:  # WHY: rollout imports lerobot, absent in the robosuite envs
+    from .rollout import Episode
 
 INDEX_FILE = "episodes.jsonl"
 
@@ -41,6 +42,18 @@ def save_episode(run_dir: Path | str, idx: int, ep: Episode, label: str,
 
     line = {"idx": idx, **ep.summary(), "label": label,
             "layers": sorted(activations) if activations else []}
+    with open(Path(run_dir) / INDEX_FILE, "a") as f:
+        f.write(json.dumps(line) + "\n")
+    return line
+
+
+def save_npz_episode(run_dir: Path | str, idx: int, trace: dict[str, np.ndarray],
+                     line: dict[str, Any]) -> dict[str, Any]:
+    """save_episode for runs without a LeRobot Episode (robosuite Square): trace arrays + index line."""
+    path = episode_path(run_dir, idx)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(path, **{f"trace/{k}": v for k, v in trace.items()})
+    line = {"idx": idx, **line}
     with open(Path(run_dir) / INDEX_FILE, "a") as f:
         f.write(json.dumps(line) + "\n")
     return line

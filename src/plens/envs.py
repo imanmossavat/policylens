@@ -81,6 +81,8 @@ def observe_insertion(env) -> dict[str, np.ndarray]:
     ph = _aloha_physics(env)
     force, n = _contact_force(ph, {"red_peg"}, SOCKET_GEOMS)
     return {"peg_pos": np.array(ph.named.data.xpos["peg"]), "socket_pos": np.array(ph.named.data.xpos["socket"]),
+            # WHY: the socket is held tilted, so peg-in-hole offsets need the socket's own frame
+            "peg_quat": np.array(ph.named.data.xquat["peg"]), "socket_quat": np.array(ph.named.data.xquat["socket"]),
             "peg_socket_force": np.float32(force), "peg_socket_contacts": np.int32(n),
             "agent_pos": np.array(env.unwrapped._env.task.get_qpos(ph))}  # = the policy's state input
 
