@@ -1,0 +1,48 @@
+[robosuite WARNING] No private macro file found! (macros.py:53)
+WARNING:robosuite_logs:No private macro file found!
+[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
+WARNING:robosuite_logs:It is recommended to use a private macro file
+[robosuite WARNING] To setup, run: python /opt/miniconda3/envs/plens-dppo/lib/python3.12/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
+WARNING:robosuite_logs:To setup, run: python /opt/miniconda3/envs/plens-dppo/lib/python3.12/site-packages/robosuite/scripts/setup_macros.py
+runs/20261028-044216_square_dppo_dice_40x8_s10
+8/320 episodes, success 2, 26s
+16/320 episodes, success 2, 55s
+24/320 episodes, success 5, 82s
+32/320 episodes, success 6, 116s
+40/320 episodes, success 9, 149s
+48/320 episodes, success 13, 178s
+56/320 episodes, success 16, 210s
+64/320 episodes, success 22, 237s
+72/320 episodes, success 22, 274s
+80/320 episodes, success 24, 309s
+88/320 episodes, success 26, 340s
+96/320 episodes, success 26, 370s
+104/320 episodes, success 29, 396s
+112/320 episodes, success 34, 417s
+120/320 episodes, success 35, 444s
+128/320 episodes, success 41, 466s
+136/320 episodes, success 43, 498s
+144/320 episodes, success 44, 535s
+152/320 episodes, success 44, 582s
+160/320 episodes, success 47, 620s
+168/320 episodes, success 51, 656s
+176/320 episodes, success 55, 685s
+184/320 episodes, success 55, 722s
+192/320 episodes, success 56, 761s
+200/320 episodes, success 58, 795s
+208/320 episodes, success 60, 827s
+216/320 episodes, success 63, 860s
+224/320 episodes, success 69, 894s
+232/320 episodes, success 69, 929s
+240/320 episodes, success 69, 962s
+248/320 episodes, success 71, 993s
+256/320 episodes, success 71, 1025s
+264/320 episodes, success 71, 1057s
+272/320 episodes, success 78, 1086s
+280/320 episodes, success 84, 1111s
+288/320 episodes, success 85, 1147s
+296/320 episodes, success 85, 1184s
+304/320 episodes, success 88, 1214s
+312/320 episodes, success 90, 1254s
+320/320 episodes, success 95, 1280s
+{"n_episodes": 320, "success_rate": 0.2969, "success_ci95": [0.2495, 0.3491], "labels": {"fail": 171, "near_miss": 54, "success": 95}, "mean_max_coverage": 0.4975, "mean_steps": 354.1}

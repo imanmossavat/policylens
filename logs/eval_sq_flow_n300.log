@@ -1,0 +1,11 @@
+[robosuite WARNING] No private macro file found! (macros.py:53)
+[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
+[robosuite WARNING] To setup, run: python /opt/miniconda3/envs/plens-dppo/lib/python3.12/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
+runs/20261028-053033_eval_sq_flow_n300
+50/300 episodes, success 30, 134s
+100/300 episodes, success 54, 268s
+150/300 episodes, success 78, 398s
+200/300 episodes, success 102, 531s
+250/300 episodes, success 126, 665s
+300/300 episodes, success 153, 796s
+{"n_episodes": 300, "success_rate": 0.51, "success_ci95": [0.4537, 0.5661], "labels": {"fail": 104, "near_miss": 43, "success": 153}, "mean_max_coverage": 0.7063, "mean_steps": 314.1}

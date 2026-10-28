@@ -4,6 +4,7 @@
   python scripts/square_eval.py rollouts --n 20 --batch-size 10 --name square_dppo_pilot
   python scripts/square_eval.py rollouts --n 200 --batch-size 50 --video 6 --name square_dppo_n200
   python scripts/square_eval.py rollouts --n 10 --repeat 8 --name square_dppo_dice   # 10 starts x 8 noise draws
+  python scripts/square_eval.py rollouts --n 300 --batch-size 50 --checkpoint runs/<id>/checkpoint.pt --name sq_eval_x
 
 Episode i uses start seed --seed + i. Batches of --batch-size share one policy call per re-plan
 and one torch noise seed (first seed of the batch + --noise-seed-offset), as in G-008.
@@ -30,6 +31,7 @@ def parse_args() -> argparse.Namespace:
                    help="Run each start this many times in one batch (only the sampling noise differs); overrides --batch-size")
     p.add_argument("--noise-seed-offset", type=int, default=0)
     p.add_argument("--weights", choices=["ema", "model"], default="ema", help="Which checkpoint weights (load_policy)")
+    p.add_argument("--checkpoint", default=None, help="A plens checkpoint from square_train.py; default: DPPO's (D-014)")
     p.add_argument("--max-steps", type=int, default=square.MAX_STEPS)
     p.add_argument("--video", type=int, default=0, help="Render the first N episodes to videos/")
     p.add_argument("--device", default="cpu")
@@ -40,7 +42,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     run_dir = new_run("runs", args.name or f"square_{args.mode}", vars(args) | {
-        "checkpoint": str(square.CKPT.relative_to(square.ROOT)), "env_kwargs": square.ENV_KWARGS,
+        "checkpoint": args.checkpoint or str(square.CKPT.relative_to(square.ROOT)), "env_kwargs": square.ENV_KWARGS,
         "policy_cfg": square.POLICY_CFG})
     print(run_dir)
     t0 = time.time()
@@ -52,7 +54,11 @@ def main() -> None:
             k = sum(r["success"] for r in rows)
             summary = {"n_demos": len(rows), "replay_success": k, "rate": round(k / len(rows), 4)}
         else:
-            model = square.load_policy(device=args.device, weights=args.weights)
+            if args.checkpoint:
+                from plens.train_square import load_trained
+                model = load_trained(args.checkpoint, device=args.device, weights=args.weights)
+            else:
+                model = square.load_policy(device=args.device, weights=args.weights)
             size = args.repeat if args.repeat > 1 else args.batch_size
             envs = [square.make_env() for _ in range(size)]
             if args.repeat > 1:

@@ -16,6 +16,8 @@ Index of modules (grep the name to jump):
   disassembly - ALOHA extraction: frozen assembled states, scripted extractors, demos, evaluation (F-008/F-009)
   forcecheck - robosuite Square wrist force sanity check (plens-robosuite env)
   square    - robosuite Square + DPPO pretrained diffusion: env, policy, batched rollouts with force, demo replay (plens-dppo env)
+  train_square - train Square diffusion or flow policies on N DPPO demos (train with torch 2.11, G-016)
+  metaworld_check - trivial-controller check for Meta-World disassembly tasks (plens-metaworld env)
 """
 
 __version__ = "0.1.0"

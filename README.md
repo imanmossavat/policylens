@@ -32,8 +32,10 @@ python scripts/fate_plot.py runs/<fate run>                                     
 python scripts/probe_contact.py runs/<aloha run with --temporal-ensemble 0.01> [--target force]  # Q-012
 python scripts/disassembly.py baseline --from-run runs/<insertion run>                       # extraction (F-008)
 python scripts/square_force.py                                                               # in a robosuite env
+python scripts/square_eval.py rollouts --n 300 --batch-size 50 --name square_dppo                # plens-dppo env (D-014)
+python scripts/square_train.py --kind flow --n-demos 300 --steps 100000                       # lerobot-gestures env (G-016)
 ```
-Tasks and what each records: `TASKS` in src/plens/envs.py. ALOHA needs gym-aloha; robosuite needs mujoco==3.3.0.
+Tasks and what each records: `TASKS` in src/plens/envs.py. ALOHA needs gym-aloha; robosuite needs mujoco==3.3.0; Square + DPPO uses its own env and downloads (docs/assets.md).
 Results land in `runs/<run_id>/`; see `LAYOUT` in src/plens/store.py.
 
 ## Explore (no robot needed)

@@ -14,7 +14,7 @@ Difficulties of assembly (tag as diff:X):
 | ALOHA cube transfer, ACT | active | diff:D | ACT predicts action chunks to fight compounding error; attention is inspectable |
 | ALOHA insertion (peg in socket), ACT | active | diff:B diff:C | First real assembly task: pretrained, bimanual, contact force readable in MuJoCo (D-013) |
 | ALOHA extraction (disassembly) | needs redesign | diff:F diff:C | Insertion reversed from frozen assembled states; trivial as built (F-009): needs a constrained pull before training a policy |
-| Meta-World assembly / disassemble (peg and ring) | planned | diff:F diff:B | Ready-made pair with scripted experts; lerobot/smolvla_metaworld covers both; run the triviality check first |
+| Meta-World assembly / disassemble (peg and ring) | paused (F-031) | diff:F diff:B | Disassembly falls to reach, grab, pull straight (F-031); needs the user's call before any redesign |
 | robomimic Square (nut on peg) | active | diff:B diff:C | Panda in robosuite; DPPO's pretrained state diffusion policy in its own env (D-014); wrist force/torque logged every step |
 | Square reversed (disassembly) | planned | diff:F | Remove nut from peg; compare with assembly representations |
 | robomimic Tool Hang | optional | diff:E diff:B | Multi-step precise insertion |

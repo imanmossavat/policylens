@@ -83,7 +83,7 @@ class Normalizer:
         return (a + 1) / 2 * (self.act_max - self.act_min) + self.act_min
 
 
-def load_policy(ckpt: Path | str = CKPT, device: str = "cpu", weights: str = "ema"):
+def load_policy(ckpt: Path | str | None = CKPT, device: str = "cpu", weights: str = "ema"):
     """DPPO DiffusionModel with the pretrained weights, loaded strictly.
 
     weights="ema" is what DPPO fine-tuning starts from (DiffusionModel loads "ema" when present);
@@ -105,6 +105,8 @@ def load_policy(ckpt: Path | str = CKPT, device: str = "cpu", weights: str = "em
     net = Unet1D(cond_dim=POLICY_CFG["obs_dim"], action_dim=POLICY_CFG["action_dim"], **UNET_CFG)
     model = _Model(net,device=device, predict_epsilon=True, denoised_clip_value=1.0,
                            randn_clip_value=3, **POLICY_CFG)
+    if ckpt is None:  # untrained, for plens.train_square
+        return model
     state = torch.load(ckpt, map_location=device, weights_only=True)[weights]
     # WHY: DPPO loads with strict=False, which would silently run random weights on a key mismatch.
     model.load_state_dict(state, strict=True)
@@ -149,6 +151,22 @@ def stage_flags(nut: np.ndarray, peg: np.ndarray) -> tuple[np.ndarray, np.ndarra
     return nut[..., 2] > LIFT_Z, np.all(np.abs(nut[..., :2] - peg[..., :2]) < NEAR_XY_M, axis=-1)
 
 
+def nut_peg_contact(env) -> tuple[float, int]:
+    """Summed normal contact force (N) and contact count between the square nut and its peg (MuJoCo contacts)."""
+    import mujoco
+
+    m, d = env.sim.model._model, env.sim.data._data
+    nut, peg = env.obj_body_id[env.nuts[0].name], env.peg1_body_id
+    total, n, f6 = 0.0, 0, np.zeros(6)
+    for i in range(d.ncon):
+        b1, b2 = m.geom_bodyid[d.contact[i].geom1], m.geom_bodyid[d.contact[i].geom2]
+        if {b1, b2} == {nut, peg}:
+            mujoco.mj_contactForce(m, d, i, f6)
+            total += abs(f6[0])
+            n += 1
+    return total, n
+
+
 def _record(env, ep: SquareEpisode, action: np.ndarray | None) -> None:
     robot = env.robots[0]
     nut, peg = _nut_peg(env)
@@ -158,6 +176,7 @@ def _record(env, ep: SquareEpisode, action: np.ndarray | None) -> None:
         "eef_pos": np.array(env.sim.data.site_xpos[robot.eef_site_id]),  # world frame, like nut/peg "gripper_qpos": np.array(env.sim.data.qpos[robot._ref_gripper_joint_pos_indexes]),
         "wrist_force": np.array(robot.ee_force), "wrist_torque": np.array(robot.ee_torque),
     }
+    row["nut_peg_force"], row["nut_peg_contacts"] = nut_peg_contact(env)
     if action is not None:
         row["action"] = action
     for k, v in row.items():
@@ -190,7 +209,7 @@ def rollout_batch(model, envs: Sequence, seeds: Sequence[int], norm: Normalizer 
         _record(env, ep, None)
         eps.append(ep)
         obs.append(obs_vector(raw))
-    device = model.betas.device
+    device = next(model.parameters()).device
     active = list(range(len(seeds)))
     t = 0
     while active and t < max_steps:
@@ -259,3 +278,34 @@ def render_states(states: np.ndarray, camera: str = "agentview", size: int = 256
         frames.append(renderer.render().copy())
     renderer.close()
     return frames
+
+
+CONTACT_N = 20.0  # wrist force above this = pressing on something (free carry with the nut is ~5 N)
+
+
+def peg_phase_force(trace: dict[str, np.ndarray], early_steps: int = 20) -> dict[str, Any] | None:
+    """Wrist force once the nut first gets over the peg; None if it never does.
+
+    early_*: only the first early_steps steps there (1 s), i.e. before the outcome is usually visible.
+    """
+    nut, peg, f = trace["nut_pos"], trace["peg_pos"], np.linalg.norm(trace["wrist_force"], axis=1)
+    over = stage_flags(nut, peg)[1]
+    if not over.any():
+        return None
+    t0 = int(np.argmax(over))
+    ph, early = f[t0:], f[t0:t0 + early_steps]
+    return {"t_over_peg": t0, "steps_at_peg": len(ph), "median_n": float(np.median(ph)), "max_n": float(ph.max()),
+            "contact_frac": float((ph > CONTACT_N).mean()), "early_max_n": float(early.max()),
+            "early_contact_frac": float((early > CONTACT_N).mean())}
+
+
+def contact_from_states(states: np.ndarray, env=None) -> np.ndarray:
+    """Nut-peg contact force (N) per saved sim state; recovers it for runs recorded before it was traced."""
+    env = env or make_env()
+    env.reset()
+    out = np.zeros(len(states))
+    for i, s in enumerate(states):
+        env.sim.set_state_from_flattened(s)
+        env.sim.forward()
+        out[i] = nut_peg_contact(env)[0]
+    return out
