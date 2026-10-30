@@ -14,6 +14,8 @@ PushT is only the training ground for the toolkit (D-001).
 | Models, checkpoints, data on disk; conda envs | docs/assets.md | |
 | Traps already hit | docs/gotchas.md, plus code sites | `G-0`, `GOTCHA(` |
 | Results so far | docs/findings.md | `F-0` |
+| All published reports (links, sources, records) | docs/reports.md | |
+| Square report: every run, command, version, how to rebuild the page | docs/report_square.md | |
 | Open research questions | docs/questions.md | `Q-0` |
 | Tasks and the assembly difficulty each isolates | docs/tasks.md | `diff:A` ... `diff:F` |
 | Human-readable story docs (user's own, don't read unless asked) | docs/readable.md | |
